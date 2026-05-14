@@ -1098,7 +1098,7 @@ def login_page():
         <div class="title">업무 자동화 시스템</div>
         <div class="desc">전자상거래 · 3PL · 씨앤에어 업무를 한 곳에서 처리합니다.<br>파일 변환, 검증, 현장 운영 자료를 빠르게 자동화합니다.</div>
         <div class="logo-box">{logo_html}</div>
-        <div class="version">TY LOGIS Internal System · v22.3</div>
+        <div class="version">TY LOGIS Internal System · v22.4</div>
         """, unsafe_allow_html=True)
     with right:
         st.markdown('<div class="login-title">로그인</div><div class="login-sub">계정과 비밀번호를 입력하세요.</div>', unsafe_allow_html=True)
@@ -1123,7 +1123,7 @@ def topbar():
     }
     page_name = page_map.get(st.session_state.page, "메인 대시보드")
     st.markdown(f"""
-    <div class="topbar"><div><div class="topbar-title">TY LOGIS 업무 자동화 시스템</div><div class="topbar-sub">접속 계정: {st.session_state.user} · {page_name}</div></div><div class="badge">v22.3</div></div>
+    <div class="topbar"><div><div class="topbar-title">TY LOGIS 업무 자동화 시스템</div><div class="topbar-sub">접속 계정: {st.session_state.user} · {page_name}</div></div><div class="badge">v22.4</div></div>
     """, unsafe_allow_html=True)
 
 
@@ -1558,6 +1558,16 @@ def kyungdong_page():
                 st.error("매칭파일의 '정상매칭' 시트 컬럼명이 예상과 달라요. (택배송장(E), 세관신고송장(F))")
                 st.stop()
 
+            required_dc_cols = ["HBL NO", "BOX 수량", "중량"]
+            missing_dc_cols = [c for c in required_dc_cols if c not in hak_df.columns]
+            if missing_dc_cols:
+                st.error(
+                    "동춘경동 신규파일 양식이 아니에요. "
+                    f"필요 컬럼: {', '.join(required_dc_cols)} / 없는 컬럼: {', '.join(missing_dc_cols)}\n\n"
+                    "업로드한 파일이 학익경동 양식이면 위의 '③ 학익경동 자동변환' 탭에서 처리해주세요."
+                )
+                st.stop()
+
             map_group = match_df.groupby("세관신고송장(F)")["택배송장(E)"].apply(list).to_dict()
             rows = []
 
@@ -1573,9 +1583,10 @@ def kyungdong_page():
 
                 def base_row(rr):
                     rr = rr.copy()
-                    rr["BOX 수량"] = 1
-                    if per is not None:
-                        rr["중량"] = round(per, 3)
+                    if "BOX 수량" in rr.index:
+                        rr.loc["BOX 수량"] = 1
+                    if per is not None and "중량" in rr.index:
+                        rr.loc["중량"] = round(per, 3)
                     return rr
 
                 if e_list:
@@ -1689,9 +1700,10 @@ def kyungdong_page():
 
                 def make_row(rr):
                     rr = rr.copy()
-                    rr["C/T"] = 1
-                    if per_wt is not None:
-                        rr["W/T"] = round(per_wt, 3)
+                    if "C/T" in rr.index:
+                        rr.loc["C/T"] = 1
+                    if per_wt is not None and "W/T" in rr.index:
+                        rr.loc["W/T"] = round(per_wt, 3)
                     return rr
 
                 if e_list:
