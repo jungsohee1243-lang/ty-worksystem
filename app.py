@@ -7,6 +7,8 @@ from datetime import datetime
 import pandas as pd
 import pdfplumber
 import streamlit as st
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
 
 
 COLUMNS = [
@@ -1096,7 +1098,7 @@ def login_page():
         <div class="title">업무 자동화 시스템</div>
         <div class="desc">전자상거래 · 3PL · 씨앤에어 업무를 한 곳에서 처리합니다.<br>파일 변환, 검증, 현장 운영 자료를 빠르게 자동화합니다.</div>
         <div class="logo-box">{logo_html}</div>
-        <div class="version">TY LOGIS Internal System · v22.1</div>
+        <div class="version">TY LOGIS Internal System · v22.3</div>
         """, unsafe_allow_html=True)
     with right:
         st.markdown('<div class="login-title">로그인</div><div class="login-sub">계정과 비밀번호를 입력하세요.</div>', unsafe_allow_html=True)
@@ -1110,34 +1112,198 @@ def login_page():
         st.markdown('<div class="small-text">테스트 계정: admin / 1234, ty / 1234, yst / 1234</div>', unsafe_allow_html=True)
 
 def topbar():
-    page_name = "3PL BL PDF 변환" if st.session_state.page == "bl_convert" else ("전자상 경동리스트" if st.session_state.page == "kyungdong" else "메인 대시보드")
+    page_map = {
+        "main": "메인 대시보드",
+        "ecommerce": "전자상거래",
+        "seaair": "SEA & AIR",
+        "threepl": "3PL",
+        "bl_convert": "3PL BL PDF 변환",
+        "kyungdong": "전자상 경동리스트",
+        "meni_convert": "메니변환",
+    }
+    page_name = page_map.get(st.session_state.page, "메인 대시보드")
     st.markdown(f"""
-    <div class="topbar"><div><div class="topbar-title">TY LOGIS 업무 자동화 시스템</div><div class="topbar-sub">접속 계정: {st.session_state.user} · {page_name}</div></div><div class="badge">v22.1</div></div>
+    <div class="topbar"><div><div class="topbar-title">TY LOGIS 업무 자동화 시스템</div><div class="topbar-sub">접속 계정: {st.session_state.user} · {page_name}</div></div><div class="badge">v22.3</div></div>
     """, unsafe_allow_html=True)
+
 
 def main_page():
     topbar()
+
+    st.markdown('<div class="section-title">부서별 업무 메뉴</div>', unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns(3, gap="large")
+
+    with c1:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">🛒</div>'
+            '<div class="card-title">전자상거래</div>'
+            '<div class="card-desc">전자상 통관·택배·경동리스트 관련 업무를 처리합니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("전자상거래 들어가기", use_container_width=True, key="go_ecom"):
+            st.session_state.page = "ecommerce"
+            st.rerun()
+
+    with c2:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">🚢</div>'
+            '<div class="card-title">SEA & AIR</div>'
+            '<div class="card-desc">해상·항공 포워딩 관련 업무 메뉴를 구성할 수 있습니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("SEA & AIR 들어가기", use_container_width=True, key="go_seaair"):
+            st.session_state.page = "seaair"
+            st.rerun()
+
+    with c3:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">🏭</div>'
+            '<div class="card-title">3PL</div>'
+            '<div class="card-desc">BL/PDF 변환, 현장 운영, 적재 관련 업무를 처리합니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("3PL 들어가기", use_container_width=True, key="go_3pl"):
+            st.session_state.page = "threepl"
+            st.rerun()
+
+    st.divider()
+
+    if st.button("로그아웃"):
+        st.session_state.login = False
+        st.session_state.user = ""
+        st.session_state.page = "main"
+        st.rerun()
+
+
+def ecommerce_page():
+    topbar()
+    if st.button("← 메인으로 돌아가기", key="ecom_back"):
+        st.session_state.page = "main"
+        st.rerun()
+
+    st.markdown(
+        '<div class="content-card"><div class="page-title">🛒 전자상거래</div>'
+        '<div class="page-sub">전자상 통관·택배·경동리스트 업무 메뉴입니다.</div></div>',
+        unsafe_allow_html=True,
+    )
+
     c1, c2, c3 = st.columns(3, gap="large")
     with c1:
-        st.markdown('<div class="dashboard-card"><div class="card-icon">📄</div><div class="card-title">3PL BL / PDF 변환</div><div class="card-desc">PDF BL 파일을 업로드하면 엑셀 변환 결과를 생성합니다.</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown('<div class="dashboard-card"><div class="card-icon">📍</div><div class="card-title">주소 / 통관 검증</div><div class="card-desc">주소 정리, 우편번호 확인, 개인통관부호 검증 기능을 연결할 수 있습니다.</div></div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown('<div class="dashboard-card"><div class="card-icon">📦</div><div class="card-title">현장 운영 / 적재</div><div class="card-desc">현장 작업자료, 입출고, 팔레트 적재 기능을 추가할 수 있습니다.</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">업무 메뉴</div>', unsafe_allow_html=True)
-    m1, m2, m3, m4 = st.columns(4, gap="medium")
-    with m1:
-        if st.button("3PL BL 변환", use_container_width=True):
-            st.session_state.page = "bl_convert"; st.rerun()
-    with m2: st.button("주소 검증", use_container_width=True)
-    with m3:
-        if st.button("전자상 경동리스트", use_container_width=True):
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">📦</div>'
+            '<div class="card-title">전자상 경동리스트</div>'
+            '<div class="card-desc">멀티건 송장 매칭, 동춘경동, 학익경동 자동변환을 처리합니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("전자상 경동리스트 열기", use_container_width=True, key="open_kd_from_ecom"):
             st.session_state.page = "kyungdong"
             st.rerun()
-    with m4: st.button("팔레트 적재", use_container_width=True)
-    st.divider()
-    if st.button("로그아웃"):
-        st.session_state.login = False; st.session_state.user = ""; st.session_state.page = "main"; st.rerun()
+
+    with c2:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">📍</div>'
+            '<div class="card-title">주소 / 통관 검증</div>'
+            '<div class="card-desc">주소 정리, 우편번호 확인, 개인통관부호 검증 메뉴를 추가할 수 있습니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("준비중", use_container_width=True, disabled=True, key="ecom_addr_ready")
+
+    with c3:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">🧾</div>'
+            '<div class="card-title">메니변환</div>'
+            '<div class="card-desc">HDFC 메니 파일의 HS코드, 용도구분, 중량, FTA 관련 처리를 자동 변환합니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("메니변환 열기", use_container_width=True, key="open_meni_from_ecom"):
+            st.session_state.page = "meni_convert"
+            st.rerun()
+
+
+def seaair_page():
+    topbar()
+    if st.button("← 메인으로 돌아가기", key="seaair_back"):
+        st.session_state.page = "main"
+        st.rerun()
+
+    st.markdown(
+        '<div class="content-card"><div class="page-title">🚢 SEA & AIR</div>'
+        '<div class="page-sub">해상·항공 포워딩 관련 업무 메뉴입니다.</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    c1, c2, c3 = st.columns(3, gap="large")
+    with c1:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">📄</div>'
+            '<div class="card-title">서류 변환</div>'
+            '<div class="card-desc">해상·항공 서류 자동화 메뉴를 추가할 수 있습니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("준비중", use_container_width=True, disabled=True, key="seaair_doc_ready")
+
+    with c2:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">✈️</div>'
+            '<div class="card-title">항공 업무</div>'
+            '<div class="card-desc">항공 관련 업무 메뉴를 추가할 수 있습니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("준비중", use_container_width=True, disabled=True, key="seaair_air_ready")
+
+    with c3:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">🚢</div>'
+            '<div class="card-title">해상 업무</div>'
+            '<div class="card-desc">해상 관련 업무 메뉴를 추가할 수 있습니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("준비중", use_container_width=True, disabled=True, key="seaair_sea_ready")
+
+
+def threepl_page():
+    topbar()
+    if st.button("← 메인으로 돌아가기", key="threepl_back"):
+        st.session_state.page = "main"
+        st.rerun()
+
+    st.markdown(
+        '<div class="content-card"><div class="page-title">🏭 3PL</div>'
+        '<div class="page-sub">3PL BL/PDF 변환 및 현장 운영 업무 메뉴입니다.</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    c1, c2, c3 = st.columns(3, gap="large")
+    with c1:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">📄</div>'
+            '<div class="card-title">3PL BL / PDF 변환</div>'
+            '<div class="card-desc">PDF BL 파일을 업로드하면 엑셀 변환 결과를 생성합니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("BL 변환 열기", use_container_width=True, key="open_bl_from_3pl"):
+            st.session_state.page = "bl_convert"
+            st.rerun()
+
+    with c2:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">📦</div>'
+            '<div class="card-title">팔레트 적재</div>'
+            '<div class="card-desc">현장 적재 및 팔레트 계산 메뉴를 추가할 수 있습니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("준비중", use_container_width=True, disabled=True, key="threepl_pallet_ready")
+
+    with c3:
+        st.markdown(
+            '<div class="dashboard-card"><div class="card-icon">🏷️</div>'
+            '<div class="card-title">현장 운영</div>'
+            '<div class="card-desc">입출고, 현장 작업자료 메뉴를 추가할 수 있습니다.</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("준비중", use_container_width=True, disabled=True, key="threepl_ops_ready")
+
 
 def bl_convert_page():
     topbar()
@@ -1576,6 +1742,337 @@ def kyungdong_page():
             )
 
 
+
+# ==============================
+# 메니변환
+# ==============================
+MENI_KEYWORDS_V = [
+    "mini PC", "Vibrator", "smart watch", "Earphones",
+    "tablet android", "tablet pc", "Speakers", "smartphone",
+    "lenovo xiaoxin pad", "IPAD TABLET", "TABLET", "DRAWING BOARD",
+    "BLUETOOTH SPEAKER", "BLUETOOTH EARPHONE CLIP",
+    "BLUETOOTH EARBUDS", "BLUETOOTH",
+]
+
+MENI_WIRELESS_TERMS = [
+    "Wireless Earphones",
+    "Wireless Headphones",
+    "Wireless Earbuds",
+    "Wireless Bluetooth Earphones",
+    "Wireless Bluetooth Headphones",
+]
+
+MENI_WEIGHT_CYCLE = [1.5, 1.6, 1.7, 1.8, 1.9]
+MENI_STEP_WEIGHT = 0.1
+MENI_HS_EXCEPT_FOR_V3 = {"900290", "900410", "902920"}
+
+MENI_FTA_HS_CODES = {
+    "330430", "420292", "630622", "630629", "640219", "640299",
+    "640419", "732112", "846729", "847130", "847141", "847150",
+    "847160", "847180", "850440", "850760", "850811", "851511",
+    "851671", "851762", "851810", "851830", "851840", "852351",
+    "852499", "852589", "852691", "852852", "852862", "852869",
+    "854231", "854370", "870829", "870894", "870899", "871200",
+    "871496", "871499", "900290", "900410", "902920", "910212",
+    "910591", "940169", "950450", "950490", "950691",
+}
+
+def meni_find_column_name(columns, keyword, startswith=False):
+    for c in columns:
+        s = str(c)
+        if startswith:
+            if s.startswith(keyword):
+                return c
+        else:
+            if keyword in s:
+                return c
+    raise ValueError(f"'{keyword}' 컬럼명을 찾을 수 없습니다.")
+
+def meni_distribute_to_target(df, col_af, target_total):
+    w_series = pd.to_numeric(df[col_af], errors="coerce")
+    current_total = float(w_series.sum())
+    remaining = float(target_total) - current_total
+
+    if remaining <= 0:
+        return df, current_total, 0.0
+
+    candidates = df.index[pd.to_numeric(df[col_af], errors="coerce") >= 2].tolist()
+    if not candidates:
+        return df, current_total, 0.0
+
+    distributed = 0.0
+    i = 0
+    n = len(candidates)
+    max_loops = 2_000_000
+
+    while remaining >= MENI_STEP_WEIGHT - 1e-12 and max_loops > 0:
+        idx = candidates[i % n]
+        cur = float(w_series.loc[idx])
+        new_val = cur + MENI_STEP_WEIGHT
+
+        if abs(new_val - 30.0) < 1e-12:
+            i += 1
+            max_loops -= 1
+            continue
+
+        w_series.loc[idx] = new_val
+        df.at[idx, col_af] = new_val
+
+        distributed += MENI_STEP_WEIGHT
+        remaining -= MENI_STEP_WEIGHT
+        i += 1
+        max_loops -= 1
+
+    if remaining > 0:
+        w_series = pd.to_numeric(df[col_af], errors="coerce")
+        max_idx = w_series.idxmax()
+        cur = float(w_series.loc[max_idx])
+        new_val = cur + remaining
+
+        if abs(new_val - 30.0) >= 1e-12:
+            df.at[max_idx, col_af] = new_val
+            distributed += remaining
+            w_series.loc[max_idx] = new_val
+            remaining = 0.0
+
+    new_total = float(w_series.sum())
+    return df, new_total, distributed
+
+def meni_process_excel_to_bytes(uploaded_file, target_total=None):
+    df = pd.read_excel(uploaded_file)
+
+    col_hs    = meni_find_column_name(df.columns, "허용품목코드")
+    col_zip   = meni_find_column_name(df.columns, "ZIP CODE")
+    col_v     = meni_find_column_name(df.columns, "용도구분")
+    col_desc1 = meni_find_column_name(df.columns, "1.DESCRIPTION", startswith=True)
+    col_desc2 = meni_find_column_name(df.columns, "2.DESCRIPTION", startswith=True)
+    col_af    = meni_find_column_name(df.columns, "Total W/T")
+    col_hawb  = meni_find_column_name(df.columns, "HAWB NO")
+    col_tel   = meni_find_column_name(df.columns, "C/TEL")
+    col_total = meni_find_column_name(df.columns, "总金额")
+
+    w_orig = pd.to_numeric(df[col_af], errors="coerce")
+    count_le2_orig = int(((w_orig <= 2) & w_orig.notna()).sum())
+
+    def convert_hs_row(row):
+        val_hs = row[col_hs]
+        v_val = row[col_v]
+        if pd.isna(val_hs):
+            return val_hs
+        s = str(val_hs).strip()
+
+        if str(v_val).strip() == "3" and s in MENI_HS_EXCEPT_FOR_V3:
+            return s
+
+        if s.startswith(("1", "2", "30", "90")):
+            return "960719"
+        return s
+
+    df[col_hs] = df.apply(convert_hs_row, axis=1)
+
+    def fix_zip(z):
+        if pd.isna(z):
+            return z
+        s = str(z).strip()
+        if len(s) == 4:
+            return "0" + s
+        return s
+
+    df[col_zip] = df[col_zip].apply(fix_zip)
+
+    v_before_str = df[col_v].astype(str).str.strip()
+    wireless_mask = (v_before_str == "1") & df[col_desc1].astype(str).apply(
+        lambda x: any(term.upper() in str(x).upper() for term in MENI_WIRELESS_TERMS)
+    )
+    df.loc[wireless_mask, col_v] = 3
+    rows_v_blue = df.index[wireless_mask].tolist()
+    wireless_changed_cnt = int(wireless_mask.sum())
+    wireless_ratio_all = (wireless_changed_cnt / len(df) * 100) if len(df) else 0.0
+
+    def match_v(desc, v):
+        if pd.isna(desc) or pd.isna(v):
+            return False
+        if str(v).strip() != "1":
+            return False
+        t = str(desc).upper()
+        return any(kw.upper() in t for kw in MENI_KEYWORDS_V)
+
+    mask_v = df.apply(lambda r: match_v(r[col_desc1], r[col_v]), axis=1)
+    df.loc[mask_v, col_v] = 3
+    rows_v_red = df.index[mask_v].tolist()
+
+    w = pd.to_numeric(df[col_af], errors="coerce")
+    mask_range = (w >= 2) & (w <= 5)
+    bp_empty = df[col_desc2].isna() | (df[col_desc2].astype(str).str.strip() == "")
+    bh_no_elec = ~df[col_desc1].astype(str).str.upper().str.contains("ELECTRIC", na=False)
+    mask_target = mask_range & bp_empty & bh_no_elec
+    t_idx = df.index[mask_target].tolist()
+
+    for i, idx in enumerate(t_idx):
+        df.at[idx, col_af] = MENI_WEIGHT_CYCLE[i % len(MENI_WEIGHT_CYCLE)]
+
+    distributed_total = None
+    new_total = None
+    if target_total is not None:
+        df, new_total, distributed_total = meni_distribute_to_target(df, col_af, target_total)
+
+    w_after = pd.to_numeric(df[col_af], errors="coerce")
+    count_le2_after = int(((w_after <= 2) & w_after.notna()).sum())
+
+    tel = df[col_tel].astype(str).str.strip()
+    v_str = df[col_v].astype(str).str.strip()
+    amt = pd.to_numeric(df[col_total], errors="coerce")
+
+    mask_v1 = (v_str == "1") & tel.notna() & (tel != "")
+    df_v1 = pd.DataFrame({"TEL": tel.where(mask_v1), "AMT": amt.where(mask_v1)})
+    tel_sum = df_v1.groupby("TEL", dropna=True)["AMT"].sum()
+    bad_tels = set(tel_sum[tel_sum >= 150].index.tolist())
+
+    mask_phone_rule = mask_v1 & tel.isin(bad_tels)
+    rows_v_orange = df.index[mask_phone_rule].tolist()
+    df.loc[mask_phone_rule, col_v] = 3
+    hawb_list = df.loc[mask_phone_rule, col_hawb].astype(str).tolist()
+
+    v_after_str = df[col_v].astype(str).str.strip()
+    hs_str = df[col_hs].astype(str).str.strip()
+    amt_after = pd.to_numeric(df[col_total], errors="coerce")
+
+    mask_fta = (v_after_str == "3") & (amt_after >= 150) & hs_str.isin(MENI_FTA_HS_CODES)
+    fta_hawb_list = df.loc[mask_fta, col_hawb].astype(str).tolist()
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="처리결과")
+        wb = writer.book
+        ws = writer.sheets["처리결과"]
+
+        header = next(ws.iter_rows(min_row=1, max_row=1))
+        col_idx = {cell.value: cell.column for cell in header}
+        v_idx = col_idx[col_v]
+        af_idx = col_idx[col_af]
+
+        blue   = PatternFill(start_color="FF0070C0", end_color="FF0070C0", fill_type="solid")
+        red    = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        green  = PatternFill(start_color="FF00FF00", end_color="FF00FF00", fill_type="solid")
+        orange = PatternFill(start_color="FFFF9900", end_color="FFFF9900", fill_type="solid")
+
+        rows_v_blue_excel   = {i + 2 for i in rows_v_blue}
+        rows_v_red_excel    = {i + 2 for i in rows_v_red}
+        rows_af_excel       = {i + 2 for i in t_idx}
+        rows_v_orange_excel = {i + 2 for i in rows_v_orange}
+
+        for r in range(2, ws.max_row + 1):
+            if r in rows_v_blue_excel:
+                ws.cell(row=r, column=v_idx).fill = blue
+            if r in rows_v_red_excel:
+                ws.cell(row=r, column=v_idx).fill = red
+            if r in rows_af_excel:
+                ws.cell(row=r, column=af_idx).fill = green
+            if r in rows_v_orange_excel:
+                ws.cell(row=r, column=v_idx).fill = orange
+
+        memo = wb.create_sheet("메모")
+        memo["A1"] = "AF ≤ 2 (원본)"
+        memo["B1"] = count_le2_orig
+
+        memo["A2"] = "목표 총중량(kg)"
+        memo["B2"] = "" if target_total is None else float(target_total)
+
+        memo["A3"] = "분배 후 총중량(kg)"
+        memo["B3"] = "" if new_total is None else float(new_total)
+
+        memo["A4"] = "2차 분배량 합계(kg)"
+        memo["B4"] = "" if distributed_total is None else float(distributed_total)
+
+        memo["A5"] = "AF ≤ 2 (분배 후)"
+        memo["B5"] = count_le2_after
+
+        memo["A6"] = "WIRELESS 변경 건수(V=1→3)"
+        memo["B6"] = wireless_changed_cnt
+
+        memo["A7"] = "전화번호 중복 + 총금액합계≥150 행 수"
+        memo["B7"] = len(rows_v_orange)
+
+        memo["A8"] = "해당 전화번호 수"
+        memo["B8"] = len(bad_tels)
+
+        memo["A9"] = "WIRELESS 전체 대비 변경 비율(%)"
+        memo["B9"] = round(wireless_ratio_all, 2)
+
+        memo["A10"] = "해당 HAWB NO 리스트"
+        row = 11
+        for h in hawb_list:
+            memo[f"A{row}"] = h
+            row += 1
+
+        row += 1
+        memo[f"A{row}"] = "FTA적용건 HAWB 리스트"
+        memo[f"B{row}"] = len(fta_hawb_list)
+        row += 1
+        for h in fta_hawb_list:
+            memo[f"A{row}"] = h
+            row += 1
+
+    output.seek(0)
+
+    summary = {
+        "원본 AF≤2": count_le2_orig,
+        "분배 후 AF≤2": count_le2_after,
+        "WIRELESS 변경": wireless_changed_cnt,
+        "키워드 V변경": len(rows_v_red),
+        "중량 1차 재분배": len(t_idx),
+        "전화번호/총금액 변경": len(rows_v_orange),
+        "FTA 적용건": len(fta_hawb_list),
+    }
+
+    return output.getvalue(), summary
+
+def meni_convert_page():
+    topbar()
+    if st.button("← 전자상거래로 돌아가기", key="meni_back"):
+        st.session_state.page = "ecommerce"
+        st.rerun()
+
+    st.markdown(
+        '<div class="content-card"><div class="page-title">🧾 메니변환</div>'
+        '<div class="page-sub">HDFC 메니 파일 자동 처리 · HS코드/용도구분/중량/FTA/메모시트 생성</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    uploaded = st.file_uploader("메니 엑셀 파일 업로드", type=["xlsx", "xls"], key="meni_file")
+    target_text = st.text_input("목표 총중량(kg) (선택)", placeholder="없으면 비워두세요", key="meni_target")
+
+    target_total = None
+    if target_text.strip():
+        try:
+            target_total = float(target_text.replace(",", "").strip())
+        except Exception:
+            st.warning("목표 총중량은 숫자로 입력해주세요. 숫자가 아니면 목표 중량 없이 처리됩니다.")
+            target_total = None
+
+    if uploaded:
+        if st.button("✅ 메니변환 실행", type="primary", use_container_width=True, key="meni_run"):
+            try:
+                result_bytes, summary = meni_process_excel_to_bytes(uploaded, target_total=target_total)
+                st.success("메니변환 완료")
+
+                st.write("처리 요약")
+                st.dataframe(pd.DataFrame([summary]), use_container_width=True, hide_index=True)
+
+                st.download_button(
+                    "⬇️ 메니변환 결과 다운로드",
+                    result_bytes,
+                    file_name="메니변환_중량조정_최종.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key="meni_download",
+                )
+            except Exception as e:
+                st.error(f"처리 중 오류가 발생했습니다: {e}")
+    else:
+        st.info("엑셀 파일을 업로드하면 메니변환을 실행할 수 있습니다.")
+
+
 if not st.session_state.login:
     login_page()
 else:
@@ -1583,5 +2080,13 @@ else:
         bl_convert_page()
     elif st.session_state.page == "kyungdong":
         kyungdong_page()
+    elif st.session_state.page == "meni_convert":
+        meni_convert_page()
+    elif st.session_state.page == "ecommerce":
+        ecommerce_page()
+    elif st.session_state.page == "seaair":
+        seaair_page()
+    elif st.session_state.page == "threepl":
+        threepl_page()
     else:
         main_page()
